@@ -6,7 +6,7 @@
 #include "dmx_receiver.h"
 #include "lamp_engine.h"
 #include <Adafruit_NeoPixel.h>
-
+#include <Preferences.h>
 // ================= CONFIG =================
 #define AP_SSID "ESP32-DMX-DEBUG"
 #define AP_PASS "12345678"
@@ -14,6 +14,9 @@
 #define STATUS_LED_COUNT 1
 
 Adafruit_NeoPixel statusPixel(STATUS_LED_COUNT, STATUS_LED_PIN, NEO_RGB + NEO_KHZ800);
+
+Preferences prefs;
+uint16_t dmxStartAddress = 2;
 // ==========================================
 
 class SystemMonitor {
@@ -29,16 +32,21 @@ private:
     WebServer server{80};
     DmxReceiver* dmx;
     SystemMonitor* monitor;
-
+    LampEngine* lamp;
+    
 public:
 
-    void begin(DmxReceiver* d, SystemMonitor* m) {
+    void begin(DmxReceiver* d, SystemMonitor* m, LampEngine* l) {
 
         dmx = d;
         monitor = m;
+        lamp = l;
 
         server.on("/", [this]() { handleRoot(); });
         server.on("/data", [this]() { handleData(); });
+
+        server.on("/config", HTTP_GET, [this]() { handleGetConfig(); });
+        server.on("/config", HTTP_POST, [this]() { handleSetConfig(); });
 
         server.begin();
     }
@@ -82,12 +90,43 @@ private:
 
         server.send(200, "application/json", json);
     }
+
+    void handleGetConfig() {
+
+    String json = "{";
+    json += "\"start\":" + String(dmxStartAddress -1);
+    json += "}";
+
+    server.send(200, "application/json", json);
+}
+void handleSetConfig() {
+
+    if (!server.hasArg("start")) {
+        server.send(400, "text/plain", "Missing start");
+        return;
+    }
+
+    uint16_t newStart = server.arg("start").toInt();
+
+    newStart += 1; 
+
+    if (newStart < 1) newStart = 1;
+    if (newStart > 512) newStart = 512;
+
+    dmxStartAddress = newStart;
+    prefs.putUShort("start", dmxStartAddress);
+
+    lamp->begin(dmxStartAddress, 100);
+
+    server.send(200, "text/plain", "OK");
+}
 };
 
 DmxReceiver dmx;
 SystemMonitor monitor;
 WebInterface web;
 LampEngine lamp;
+
 
 unsigned long lastBlinkTime = 0;
 bool greenPulseActive = false;
@@ -104,13 +143,17 @@ void setup() {
     }
 
     dmx.begin();
-    web.begin(&dmx, &monitor);
+    web.begin(&dmx, &monitor, &lamp);
 
     statusPixel.begin();
 statusPixel.clear();
 statusPixel.show();
 
- lamp.begin(2, 100);    // Startadresse = DMX Channel 1
+// lamp.begin(2, 100);    // Startadresse = DMX Channel 1
+prefs.begin("dmx", false);
+dmxStartAddress = prefs.getUShort("start", 2);
+lamp.begin(dmxStartAddress, 100);
+
 }
 
 void updateStatusLED() {

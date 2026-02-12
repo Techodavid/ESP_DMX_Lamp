@@ -16,15 +16,30 @@ Interval (µs): <span id="interval">0</span><br>
 ESP Temp: <span id="temp">0</span> °C<br>
 Status: <span id="status">---</span><br><br>
 
-Channels 1–16:
-<div id="channels" style="
-display:grid;
-grid-template-columns: repeat(16, 1fr);
-gap:2px;
-font-size:10px;">
+Start Address:
+<input type="number" id="startInput" min="1" max="508">
+<button onclick="saveStart()">Save</button>
+<span id="currentStart"></span>
+
+<button onclick="toggleChannels()">Toggle Channels</button>
+
+
+
+<div id="channels"
+     style="display:none; grid-template-columns: repeat(16, 1fr); gap:2px; font-size:10px;">
 </div>
 
+
 <script>
+
+let showChannels = false;
+
+function toggleChannels() {
+    showChannels = !showChannels;
+    document.getElementById('channels').style.display =
+        showChannels ? "grid" : "none";
+}
+
 async function update() {
     try {
         const response = await fetch('/data');
@@ -42,32 +57,59 @@ async function update() {
             document.getElementById('status').style.color = "red";
         }
 
-       let container = document.getElementById('channels');
-container.innerHTML = "";
+        if (showChannels) {
 
-for (let i = 0; i < 512; i++) {
+            let container = document.getElementById('channels');
+            container.innerHTML = "";
 
-    let value = data.ch[i];
+            for (let i = 0; i < data.ch.length; i++) {
 
-    let div = document.createElement("div");
+                let value = data.ch[i];
 
-    div.style.border = "1px solid #033";
-    div.style.padding = "2px";
-    div.style.background = "rgb(0," + value + ",0)";
+                let div = document.createElement("div");
 
-    div.innerHTML = (i+1) + "<br>" + value;
+                div.style.border = "1px solid #033";
+                div.style.padding = "2px";
+                div.style.background = "rgb(0," + value + ",0)";
 
-    container.appendChild(div);
-}
+                div.innerHTML = (i+1) + "<br>" + value;
 
-    } catch {
+                container.appendChild(div);
+            }
+        }
+
+    } catch (e) {
         document.getElementById('status').textContent = "No Connection";
         document.getElementById('status').style.color = "orange";
     }
 }
 
+async function loadConfig() {
+    const response = await fetch('/config');
+    const data = await response.json();
+
+    document.getElementById('startInput').value = data.start;
+    document.getElementById('currentStart').textContent =
+        "Current: " + data.start;
+}
+
+async function saveStart() {
+
+    let value = document.getElementById('startInput').value;
+
+    await fetch('/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'start=' + value
+    });
+
+    loadConfig();
+}
+
 setInterval(update, 100);
 update();
+loadConfig();
+
 </script>
 
 </body>

@@ -110,7 +110,7 @@ void setup() {
 statusPixel.clear();
 statusPixel.show();
 
- lamp.begin(2);   // Startadresse = DMX Channel 1
+ lamp.begin(2, 100);    // Startadresse = DMX Channel 1
 }
 
 void updateStatusLED() {

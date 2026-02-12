@@ -24,18 +24,31 @@ void LampEngine::update(uint8_t* universe, bool signalPresent) {
         return;
     }
 
-    uint8_t dimmer = universe[startAddr];
-    uint8_t r      = universe[startAddr + 1];
-    uint8_t g      = universe[startAddr + 2];
-    uint8_t b      = universe[startAddr + 3];
+    if (mode == 6) {
 
-    uint8_t ledControl = universe[startAddr + 4];
+        uint8_t dimmer = universe[startAddr];
+        uint8_t r      = universe[startAddr + 1];
+        uint8_t g      = universe[startAddr + 2];
+        uint8_t b      = universe[startAddr + 3];
+        uint8_t ledCtl = universe[startAddr + 4];
 
-    // Map 0–255 → 0–totalLEDs
-    uint16_t activeLEDs = map(ledControl, 0, 255, 0, totalLEDs);
+        uint16_t activeLEDs = map(ledCtl, 0, 255, 0, totalLEDs);
 
-    applyOutput(dimmer, r, g, b, activeLEDs);
+        applyOutput(dimmer, r, g, b, activeLEDs);
+    }
+    else if (mode == 3) {
+
+        uint8_t r = universe[startAddr];
+        uint8_t g = universe[startAddr + 1];
+        uint8_t b = universe[startAddr + 2];
+
+        uint8_t dimmer = 255;
+        uint16_t activeLEDs = 30;  // FIX
+
+        applyOutput(dimmer, r, g, b, activeLEDs);
+    }
 }
+
 
 void LampEngine::applyOutput(uint8_t dimmer,
                              uint8_t r,
@@ -58,4 +71,12 @@ void LampEngine::applyOutput(uint8_t dimmer,
     }
 
     strip->show();
+}
+
+void LampEngine::setMode(uint8_t newMode) {
+    mode = newMode;
+}
+
+void LampEngine::setStartAddress(uint16_t newAddr) {
+    startAddr = newAddr;
 }

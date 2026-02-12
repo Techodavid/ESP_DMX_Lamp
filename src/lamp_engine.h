@@ -9,10 +9,14 @@ class LampEngine {
 public:
     void begin(uint16_t startAddress, uint16_t ledCount);
     void update(uint8_t* universe, bool signalPresent);
+    void setMode(uint8_t newMode);
+    void setStartAddress(uint16_t newAddr);
 
 private:
     uint16_t startAddr = 1;
     uint16_t totalLEDs = 1;
+
+    uint8_t mode = 6;   // 6 Channel Default
 
     Adafruit_NeoPixel* strip;
 

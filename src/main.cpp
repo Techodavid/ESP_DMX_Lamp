@@ -7,6 +7,8 @@
 #include "lamp_engine.h"
 #include <Adafruit_NeoPixel.h>
 #include <Preferences.h>
+#include "web_interface.h"
+#include "system_monitor.h"
 // ================= CONFIG =================
 #define AP_SSID "ESP32-DMX-DEBUG"
 #define AP_PASS "12345678"
@@ -17,115 +19,19 @@ Adafruit_NeoPixel statusPixel(STATUS_LED_COUNT, STATUS_LED_PIN, NEO_RGB + NEO_KH
 
 Preferences prefs;
 uint16_t dmxStartAddress = 2;
+uint8_t lampMode = 6;
 // ==========================================
 
-class SystemMonitor {
-public:
-    float getTemperature() {
-        return temperatureRead();
-    }
-};
 
-class WebInterface {
 
-private:
-    WebServer server{80};
-    DmxReceiver* dmx;
-    SystemMonitor* monitor;
-    LampEngine* lamp;
-    
-public:
 
-    void begin(DmxReceiver* d, SystemMonitor* m, LampEngine* l) {
 
-        dmx = d;
-        monitor = m;
-        lamp = l;
-
-        server.on("/", [this]() { handleRoot(); });
-        server.on("/data", [this]() { handleData(); });
-
-        server.on("/config", HTTP_GET, [this]() { handleGetConfig(); });
-        server.on("/config", HTTP_POST, [this]() { handleSetConfig(); });
-
-        server.begin();
-    }
-
-    void loop() {
-        server.handleClient();
-    }
-
-private:
-
-    void handleRoot() {
-
-        File file = SPIFFS.open("/index.html", "r");
-
-        if (!file) {
-            server.send(500, "text/plain", "index.html not found");
-            return;
-        }
-
-        server.streamFile(file, "text/html");
-        file.close();
-    }
-
-    void handleData() {
-
-        String json = "{";
-
-        json += "\"frames\":" + String(dmx->frameCount) + ",";
-        json += "\"interval\":" + String(dmx->frameInterval) + ",";
-        json += "\"signal\":" + String(dmx->signalPresent ? "true" : "false") + ",";
-        json += "\"temp\":" + String(monitor->getTemperature()) + ",";
-
-        json += "\"ch\":[";
-        for (int i = 2; i <= 512; i++) {
-            json += String(dmx->universe[i]);
-            if (i < 512) json += ",";
-        }
-        json += "]";
-
-        json += "}";
-
-        server.send(200, "application/json", json);
-    }
-
-    void handleGetConfig() {
-
-    String json = "{";
-    json += "\"start\":" + String(dmxStartAddress -1);
-    json += "}";
-
-    server.send(200, "application/json", json);
-}
-void handleSetConfig() {
-
-    if (!server.hasArg("start")) {
-        server.send(400, "text/plain", "Missing start");
-        return;
-    }
-
-    uint16_t newStart = server.arg("start").toInt();
-
-    newStart += 1; 
-
-    if (newStart < 1) newStart = 1;
-    if (newStart > 512) newStart = 512;
-
-    dmxStartAddress = newStart;
-    prefs.putUShort("start", dmxStartAddress);
-
-    lamp->begin(dmxStartAddress, 100);
-
-    server.send(200, "text/plain", "OK");
-}
-};
 
 DmxReceiver dmx;
 SystemMonitor monitor;
 WebInterface web;
 LampEngine lamp;
+
 
 
 unsigned long lastBlinkTime = 0;
@@ -154,7 +60,12 @@ prefs.begin("dmx", false);
 dmxStartAddress = prefs.getUShort("start", 2);
 lamp.begin(dmxStartAddress, 100);
 
+lampMode = prefs.getUChar("mode", 6);
+lamp.setMode(lampMode);
+
 }
+
+
 
 void updateStatusLED() {
 

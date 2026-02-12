@@ -23,7 +23,13 @@ Start Address:
 
 <button onclick="toggleChannels()">Toggle Channels</button>
 
-
+<br><br>
+Mode:
+<select id="modeSelect">
+    <option value="6">6 Channel</option>
+    <option value="3">3 Channel</option>
+</select>
+<button onclick="saveMode()">Save Mode</button>
 
 <div id="channels"
      style="display:none; grid-template-columns: repeat(16, 1fr); gap:2px; font-size:10px;">
@@ -42,7 +48,8 @@ function toggleChannels() {
 
 async function update() {
     try {
-        const response = await fetch('/data');
+        const response = await fetch(showChannels ? '/data?ch=1' : '/data');
+
         const data = await response.json();
 
         document.getElementById('frames').textContent = data.frames;
@@ -91,7 +98,22 @@ async function loadConfig() {
     document.getElementById('startInput').value = data.start;
     document.getElementById('currentStart').textContent =
         "Current: " + data.start;
+    document.getElementById('modeSelect').value = data.mode;
 }
+
+async function saveMode() {
+
+    let mode = document.getElementById('modeSelect').value;
+
+    await fetch('/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'mode=' + mode
+    });
+
+    loadConfig();
+}
+
 
 async function saveStart() {
 
@@ -106,7 +128,7 @@ async function saveStart() {
     loadConfig();
 }
 
-setInterval(update, 100);
+setInterval(update, 200);
 update();
 loadConfig();
 

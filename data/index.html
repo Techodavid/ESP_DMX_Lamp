@@ -30,7 +30,7 @@ Mode:
     <option value="3">3 Channel</option>
 </select>
 <button onclick="saveMode()">Save Mode</button>
-
+Current Mode: <span id="currentMode">---</span><br><br>
 <div id="channels"
      style="display:none; grid-template-columns: repeat(16, 1fr); gap:2px; font-size:10px;">
 </div>
@@ -98,7 +98,11 @@ async function loadConfig() {
     document.getElementById('startInput').value = data.start;
     document.getElementById('currentStart').textContent =
         "Current: " + data.start;
+
     document.getElementById('modeSelect').value = data.mode;
+
+    document.getElementById('currentMode').textContent =
+        data.mode == 3 ? "3 Channel" : "6 Channel";
 }
 
 async function saveMode() {

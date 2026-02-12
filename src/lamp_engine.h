@@ -9,6 +9,7 @@ class LampEngine {
 public:
     void begin(uint16_t startAddress, uint16_t ledCount);
     void update(uint8_t* universe, bool signalPresent);
+
     void setMode(uint8_t newMode);
     void setStartAddress(uint16_t newAddr);
 
@@ -18,13 +19,25 @@ private:
 
     uint8_t mode = 6;   // 6 Channel Default
 
-    Adafruit_NeoPixel* strip;
+    //Adafruit_NeoPixel* strip;
+    Adafruit_NeoPixel* strip = nullptr;
 
-    void applyOutput(uint8_t dimmer,
+    uint8_t fxMode = 0;
+    uint8_t fxSpeed = 0;
+    unsigned long lastFxStep = 0;
+    uint16_t fxPosition = 0;
+
+     void applyStatic(uint8_t dimmer,
                      uint8_t r,
                      uint8_t g,
                      uint8_t b,
                      uint16_t activeLEDs);
+
+    void applyFx(uint8_t dimmer,
+                 uint8_t r,
+                 uint8_t g,
+                 uint8_t b,
+                 uint16_t activeLEDs);
 };
 
 #endif
